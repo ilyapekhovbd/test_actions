@@ -20,4 +20,4 @@ jobs:
           MIDDLE_NAME: The
           LAST_NAME: Octocat
         run: |
-          echo Hi there! It's docs action! $MY_VAR $FIRST_NAME $MIDDLE_NAME $LAST_NAME.
+          echo Hi there! It\'s docs action! $MY_VAR $FIRST_NAME $MIDDLE_NAME $LAST_NAME.
