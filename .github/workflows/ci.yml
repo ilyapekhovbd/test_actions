@@ -3,8 +3,8 @@ name: Greeting from Mona for all EXCEPT docs
 on:
   push:
     branches: [master]
-    paths:
-        - '!docs/index.txt'
+    paths-ignore:
+        - 'docs/**'
   pull_request:
     branches: [master]
 
