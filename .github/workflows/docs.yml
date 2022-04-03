@@ -1,14 +1,11 @@
 name: Greeting from Mona for docs
 
 on:
-  push:
-    branches: [master]
-    paths:
-      - 'docs/**'
-  pull_request:
-    branches: [master]
-    paths:
-      - 'docs/**'
+  workflow_run:
+    workflows:
+      - Greeting from Mona for all EXCEPT docs
+    types:
+      - completed
 
 jobs:
   my-job:
