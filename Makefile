@@ -1,2 +1,5 @@
 flake8:
-	ls; flake8 ./docs
+	flake8 . --exclude docs,venv,src/alembic
+
+flake8-docs:
+	flake8 ./docs
