@@ -1,2 +1,2 @@
 flake8:
-	flake8 .
+	ls; flake8 ./docs
