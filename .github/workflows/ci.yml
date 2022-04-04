@@ -1,25 +1,64 @@
-name: Greeting from Mona for all EXCEPT docs
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Automation API Continuous Integration
 
 on:
   push:
-    branches: [master]
+    branches: [production, develop]
     paths-ignore:
       - 'docs/**'
   pull_request:
-    branches: [master]
+    branches: [develop]
     paths-ignore:
       - 'docs/**'
 
 jobs:
-  my-job:
-    name: My Job for all except docs
+  check:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
     steps:
-      - name: Print a greeting
-        env:
-          MY_VAR: Hi there! My name is
-          FIRST_NAME: Mona
-          MIDDLE_NAME: The
-          LAST_NAME: Octocat
-        run: |
-          echo Hi there! It\'s NON-docs action! $MY_VAR $FIRST_NAME $MIDDLE_NAME $LAST_NAME.
+    - uses: actions/checkout@v2
+
+    - name: Set up Python [check]
+      uses: actions/setup-python@v2
+      if: github.ref_name != 'production'
+      with:
+        python-version: 3.8.8
+
+    - name: Install dependencies [check]
+      if: github.ref_name != 'production'
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 pytest
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+
+    - name: Run checks [check]
+      if: github.ref_name != 'production'
+      id: run_checks
+      run: |
+        make flake8
+
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: check
+    if: github.event_name == 'push'
+
+    - name: Set up Python [deploy]
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8.8
+
+    - name: Install dependencies [deploy]
+      run: |
+        python -m pip install -U pip setuptools
+        python -m pip install -r requirements.txt
+
+    - name: Print result [deploy]
+      env:
+        MY_VAR: deployed
+      run: |
+        echo Automation is $MY_VAR.
