@@ -52,6 +52,7 @@ jobs:
           python -m pip install -r requirements.txt
 
       - name: Print result [deploy_docs]
+        if: endsWith(github.ref, 'heads/develop') && github.event_name == 'push'
         env:
           MY_VAR: deployed
         run: |
