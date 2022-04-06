@@ -5,7 +5,7 @@ name: Automation API Continuous Integration
 
 on:
   push:
-    branches: [production, develop]
+    branches: [develop, production]
     paths-ignore:
       - 'docs/**'
   pull_request:
@@ -13,21 +13,69 @@ on:
     paths-ignore:
       - 'docs/**'
 
+env:
+  GITHUB_TOKEN: ${{ secrets.AUTOMATE_GITHUB_ACCESS_TOKEN }}
+  ASANA_TOKEN: ${{ secrets.AUTOMATE_ASANA_TOKEN }}
+  SLACK_WEBHOOK_URL: ${{ secrets.AUTOMATE_SLACK_WEBHOOK }}
+  ANSIBLE_VAULT_PASSWORD: ${{ secrets.AUTOMATE_ANSIBLE_VAULT_PASSWORD }}
+  ANSIBLE_INVENTORY_NAME: ${{ github.ref_name == 'production' && 'production' || 'staging' }}
+
+
 jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
+    services:
+      postgres:
+        image: postgres:11-alpine
+        env:
+          POSTGRES_DB: adjust_dash_automation
+          POSTGRES_USER: adjust_dash_automation
+          POSTGRES_PASSWORD: adjust_dash_automation
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:5.0.3-alpine
+        ports:
+          - 6379:6379
+    env:
+      DB_USER: adjust_dash_automation
+      DB_PASSWORD: adjust_dash_automation
+      DB_NAME: adjust_dash_automation
+      # it's test secret key
+      SECRET_KEYS: '["4MneCi4AvpymiRd2NnlNE3O9OgQ658HXmsHHxPb4x2I="]'
+      EVENT_MAPPING_SERVICE_TOKEN: ''
+      AWS_ACCESS_KEY_ID: ''
+      AWS_SECRET_ACCESS_KEY: ''
+      AWS_STORAGE_BUCKET_NAME: ''
+      DELETE_APP_PERMISSION_KEY: '123'
+      INTERNAL_PERMISSION_KEY: 'RR123'
+      LEGACY_SECRET: 'local_django_secret'
+      PUBLIC_PATH_URL: '/control-center/adjust-app-automation'
+
+    strategy:
+      matrix:
+        checks: [ 'make flake8', 'make mypy', 'make bandit', 'make safety', 'make test']
+
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Python [check]
+    - uses: adjust/github-actions-asana@master
+      if: github.event_name == 'pull_request'
+      continue-on-error: true
+      with:
+        action: 'add-comment'
+        is-pinned: true
+        text: "View Pull Request: ${{ github.event.pull_request.html_url }}"
+
+    - name: Set up Python
       uses: actions/setup-python@v2
       if: github.ref_name != 'production'
       with:
         python-version: 3.8.8
 
-    - name: Install dependencies [check]
+    - name: Install dependencies
       if: github.ref_name != 'production'
       run: |
         python -m pip install --upgrade pip
@@ -35,11 +83,25 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
 
-    - name: Run checks [check]
+    - name: 'check: alembic'
+      if: github.ref_name != 'production'
+      id: alembic
+      run: make migrations
+
+    - name: Run checks
       if: github.ref_name != 'production'
       id: run_checks
       run: |
-        make flake8
+        ${{ matrix.checks }}
+
+    - name: Send Slack notification
+      if: github.event_name == 'push' && failure() && github.ref_name != 'production'
+      uses: adjust/github-actions-slack@v1.2.5
+      with:
+        channel: '#acq-jenkins-ci'
+        here-mention: false
+        status: ${{ job.status }}
+        steps: ${{ toJson(steps) }}
 
   deploy:
     runs-on: ubuntu-latest
@@ -48,20 +110,52 @@ jobs:
     if: github.event_name == 'push'
 
     steps:
-    - uses: actions/checkout@v2
+    - name: Clone cc-ansible
+      uses: actions/checkout@v2
+      with:
+        repository: adjust/cc-ansible
+        token: ${{ secrets.AUTOMATE_GITHUB_ACCESS_TOKEN }}
 
-    - name: Set up Python [deploy]
+    - name: Install SSH key
+      uses: shimataro/ssh-key-action@v2
+      with:
+        key: ${{ secrets.AUTOMATE_DEPLOY_SSH_KEY }}
+        known_hosts: ${{ secrets.AUTOMATE_DEPLOY_KNOWN_HOSTS }}
+        config: |
+          Host *.adjust.com
+          User acquired
+
+    - name: Set up Python
       uses: actions/setup-python@v2
       with:
         python-version: 3.8.8
 
-    - name: Install dependencies [deploy]
+    - name: Install dependencies
       run: |
         python -m pip install -U pip setuptools
         python -m pip install -r requirements.txt
 
-    - name: Print result [deploy]
-      env:
-        MY_VAR: deployed
-      run: |
-        echo Automation is $MY_VAR.
+    - name: 'Deploy: ${{env.ANSIBLE_INVENTORY_NAME}}'
+      id: deploy
+      uses: nick-invision/retry@v2
+      with:
+        timeout_minutes: 5
+        max_attempts: 3
+        retry_on: timeout
+        command: ansible-playbook -vv -i ${{env.ANSIBLE_INVENTORY_NAME}} playbooks/adjust-app-automation/deploy.yml
+
+    - uses: adjust/github-actions-asana@master
+      continue-on-error: true
+      with:
+        action: 'add-comment'
+        is-pinned: true
+        text: "${{ github.repository }} is deployed to ${{env.ANSIBLE_INVENTORY_NAME}}"
+
+    - name: Send Slack notification
+      if: always()
+      uses: adjust/github-actions-slack@v1.2.5
+      with:
+        channel: '#acq-jenkins-ci'
+        here-mention: false
+        status: ${{ job.status }}
+        steps: ${{ toJson(steps) }}

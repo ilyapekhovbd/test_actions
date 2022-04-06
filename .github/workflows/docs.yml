@@ -5,7 +5,7 @@ name: Automation API Internal/Public Docs Continuous Integration
 
 on:
   push:
-    branches: [production, develop]
+    branches: [develop, production]
     paths:
       - 'docs/**'
   pull_request:
@@ -14,50 +14,87 @@ on:
       - 'docs/**'
 
 env:
-  ANSIBLE_PLAYBOOK_NAME: ${{ github.ref_name == 'production' && 'production' || 'staging' }}
+  GITHUB_TOKEN: ${{ secrets.AUTOMATE_GITHUB_ACCESS_TOKEN }}
+  ANSIBLE_VAULT_PASSWORD: ${{ secrets.AUTOMATE_ANSIBLE_VAULT_PASSWORD }}
+  ANSIBLE_INVENTORY_NAME: ${{ github.ref_name == 'production' && 'production' || 'staging' }}
+
 
 jobs:
-  check_docs:
-    name: check [docs]
+  check_deploy_docs:
+    name: check and deploy [docs]
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
+
+    env:
+      DB_USER: adjust_dash_automation
+      DB_PASSWORD: adjust_dash_automation
+      DB_NAME: adjust_dash_automation
+      # it's test secret key
+      SECRET_KEYS: '["4MneCi4AvpymiRd2NnlNE3O9OgQ658HXmsHHxPb4x2I="]'
+      EVENT_MAPPING_SERVICE_TOKEN: ''
+      AWS_ACCESS_KEY_ID: ''
+      AWS_SECRET_ACCESS_KEY: ''
+      AWS_STORAGE_BUCKET_NAME: ''
+      DELETE_APP_PERMISSION_KEY: '123'
+      INTERNAL_PERMISSION_KEY: 'RR123'
+      LEGACY_SECRET: 'local_django_secret'
+      PUBLIC_PATH_URL: '/control-center/adjust-app-automation'
 
     steps:
       - uses: actions/checkout@v2
 
-      - name: Set up Python [check_docs]
+      - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: 3.8.8
 
-      - name: Install dependencies [check_docs]
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -U pip setuptools
-          pip install flake8 pytest
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
-
-      - name: Run flake8 [check_docs]
-        if: github.ref_name != 'production'
-        id: run_checks
-        run: |
-          make flake8-docs
-
-      - name: Install dependencies [dev] [deploy_docs]
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
-      - name: Install dependencies [deploy_docs]
+      - name: Run flake8
+        id: run_checks
         run: |
-          python -m pip install -U pip setuptools
-          python -m pip install -r requirements.txt
+          make flake8-docs
 
-      - name: 'Print result [deploy_docs] ${{env.ANSIBLE_PLAYBOOK_NAME}}'
+      - name: 'Build: ${{env.ANSIBLE_INVENTORY_NAME}} Internal/Public Docs'
         if: github.event_name == 'push'
-        env:
-          MY_VAR: deployed
         run: |
-          echo Docs is $MY_VAR ${{env.ANSIBLE_PLAYBOOK_NAME}}.
-          ansible-playbook -v -i ${{env.ANSIBLE_PLAYBOOK_NAME}}
+          make docs-build
+          make docs-public-build
+
+      - name: 'Move Docs assets to tmp folder'
+        if: github.event_name == 'push'
+        run: |
+          mv ./docs/build/html /tmp/docs
+          mv ./docs/build-public/html /tmp/public_docs
+
+      - name: Clone cc-ansible
+        if: github.event_name == 'push'
+        uses: actions/checkout@v2
+        with:
+          repository: adjust/cc-ansible
+          token: ${{ secrets.AUTOMATE_GITHUB_ACCESS_TOKEN }}
+
+      - name: Install SSH key
+        if: github.event_name == 'push'
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.AUTOMATE_DEPLOY_SSH_KEY }}
+          known_hosts: ${{ secrets.AUTOMATE_DEPLOY_KNOWN_HOSTS }}
+          config: |
+            Host *.adjust.com
+            User acquired
+
+      - name: 'Deploy: ${{env.ANSIBLE_INVENTORY_NAME}} Internal/Public Docs'
+        if: github.event_name == 'push'
+        uses: nick-invision/retry@v2
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          retry_on: timeout
+          command: >
+            ansible-playbook -v -i ${{env.ANSIBLE_INVENTORY_NAME}} playbooks/adjust-app-automation/frontend-admin.yml 
+            --extra-vars source_private_dir=/tmp/docs 
+            --extra-vars source_public_dir=/tmp/public_docs
