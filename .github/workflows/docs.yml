@@ -59,4 +59,5 @@ jobs:
         env:
           MY_VAR: deployed
         run: |
-          echo Docs is $MY_VAR ANSIBLE_PLAYBOOK_NAME.
+          echo Docs is $MY_VAR ${{env.ANSIBLE_PLAYBOOK_NAME}}.
+          ansible-playbook -v -i ${{env.ANSIBLE_PLAYBOOK_NAME}}
