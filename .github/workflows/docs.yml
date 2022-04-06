@@ -54,9 +54,9 @@ jobs:
           python -m pip install -U pip setuptools
           python -m pip install -r requirements.txt
 
-      - name: "Print result [deploy_docs] $NAME_ILYA"
+      - name: Print result [deploy_docs] $NAME_ILYA
         if: endsWith(github.ref, 'heads/develop') && github.event_name == 'push'
         env:
           MY_VAR: deployed
         run: |
-          echo Docs is $MY_VAR.
+          echo Docs is $MY_VAR $NAME_ILYA.
