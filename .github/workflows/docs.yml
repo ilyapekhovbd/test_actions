@@ -14,7 +14,7 @@ on:
       - 'docs/**'
 
 env:
-  NAME_ILYA: Ilya_namE
+  ANSIBLE_PLAYBOOK_NAME: ${{ github.ref_name == 'production' && 'production' || 'staging' }}
 
 jobs:
   check_docs:
@@ -54,9 +54,9 @@ jobs:
           python -m pip install -U pip setuptools
           python -m pip install -r requirements.txt
 
-      - name: "Print result [deploy_docs] ${{env.NAME_ILYA}}"
+      - name: 'Print result [deploy_docs] ${{env.ANSIBLE_PLAYBOOK_NAME}}'
         if: endsWith(github.ref, 'heads/develop') && github.event_name == 'push'
         env:
           MY_VAR: deployed
         run: |
-          echo Docs is $MY_VAR $NAME_ILYA.
+          echo Docs is $MY_VAR ANSIBLE_PLAYBOOK_NAME.
