@@ -55,7 +55,7 @@ jobs:
           python -m pip install -r requirements.txt
 
       - name: 'Print result [deploy_docs] ${{env.ANSIBLE_PLAYBOOK_NAME}}'
-        if: endsWith(github.ref, 'heads/develop') && github.event_name == 'push'
+        if: github.event_name == 'push'
         env:
           MY_VAR: deployed
         run: |
