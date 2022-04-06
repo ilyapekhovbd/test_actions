@@ -13,6 +13,9 @@ on:
     paths:
       - 'docs/**'
 
+env:
+  NAME_ILYA: Ilya_namE
+
 jobs:
   check_docs:
     name: check [docs]
@@ -51,7 +54,7 @@ jobs:
           python -m pip install -U pip setuptools
           python -m pip install -r requirements.txt
 
-      - name: Print result [deploy_docs]
+      - name: "Print result [deploy_docs] $NAME_ILYA"
         if: endsWith(github.ref, 'heads/develop') && github.event_name == 'push'
         env:
           MY_VAR: deployed
