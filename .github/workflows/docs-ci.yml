@@ -41,6 +41,9 @@ jobs:
       PUBLIC_PATH_URL: '/control-center/adjust-app-automation'
 
     steps:
+      - name: check (make mypy)
+        if: always()
+
       - uses: actions/checkout@v2
 
       - name: Set up Python
