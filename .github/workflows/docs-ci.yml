@@ -20,11 +20,11 @@ env:
 
 
 jobs:
-  check_mypy:
-    name: check (make mypy)
+  dummy_check_mypy:
     runs-on: ubuntu-latest
     steps:
-      - run: 'echo "No make mypy"'
+      - name: check (make mypy)
+        run: 'echo "No make mypy"'
 
   check_deploy_docs:
     name: check and deploy [docs]
