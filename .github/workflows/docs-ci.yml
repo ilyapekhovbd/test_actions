@@ -24,37 +24,37 @@ jobs:
     name: check
     runs-on: ubuntu-latest
     steps:
-      - run: 'echo "Dummy check to pass required production github checks on docs change"'
+      - run: 'echo "Dummy check to pass required \"production\" github checks on docs change"'
 
   dummy_bandit_check:
     name: check (make bandit)
     runs-on: ubuntu-latest
     steps:
-      - run: 'echo "Dummy make bandit check to pass required develop github checks on docs change"'
+      - run: 'echo "Dummy make bandit check to pass required \"develop\" github checks on docs change"'
 
   dummy_flake8_check:
     name: check (make flake8)
     runs-on: ubuntu-latest
     steps:
-      - run: 'echo "Dummy make flake8 check to pass required develop github checks on docs change"'
+      - run: 'echo "Dummy make flake8 check to pass required \"develop\" github checks on docs change"'
 
   dummy_mypy_check:
     name: check (make mypy)
     runs-on: ubuntu-latest
     steps:
-      - run: 'echo "Dummy make mypy check to pass required develop github checks on docs change"'
+      - run: 'echo "Dummy make mypy check to pass required \"develop\" github checks on docs change"'
 
   dummy_safety_check:
     name: check (make safety)
     runs-on: ubuntu-latest
     steps:
-      - run: 'echo "Dummy make safety check to pass required develop github checks on docs change"'
+      - run: 'echo "Dummy make safety check to pass required \"develop\" github checks on docs change"'
 
   dummy_test_check:
     name: check (make test)
     runs-on: ubuntu-latest
     steps:
-      - run: 'echo "Dummy make test check to pass required develop github checks on docs change"'
+      - run: 'echo "Dummy make test check to pass required \"develop\" github checks on docs change"'
 
   check_deploy_docs:
     name: check and deploy [docs]
