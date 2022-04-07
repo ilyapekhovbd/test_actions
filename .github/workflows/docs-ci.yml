@@ -20,6 +20,12 @@ env:
 
 
 jobs:
+  check:
+    name: check (make mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'echo "No make mypy"'
+
   check_deploy_docs:
     name: check and deploy [docs]
     runs-on: ubuntu-latest
@@ -41,11 +47,6 @@ jobs:
       PUBLIC_PATH_URL: '/control-center/adjust-app-automation'
 
     steps:
-      - name: check (make mypy)
-        uses: actions/setup-node@v1
-        with:
-          node-version: '10.x'
-
       - uses: actions/checkout@v2
 
       - name: Set up Python
