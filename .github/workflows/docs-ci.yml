@@ -20,7 +20,7 @@ env:
 
 
 jobs:
-  check:
+  check_mypy:
     name: check (make mypy)
     runs-on: ubuntu-latest
     steps:
